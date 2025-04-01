@@ -11,22 +11,12 @@
 #define MAX_PATH_LEN 256
 #define MAX_VERSION_LEN 16
 
-/*
- *  Funciton to satify the assigmment:
- * */
 Request parse_request(const char *raw) {
     Request req = {0};
     sscanf(raw, "%7s %255s %15s", req.method, req.path, req.version);
     return req;
 }
 
-
-
-/************************************************************
- *
- *  Following are two examples of safer parsing functions
- *
- ********************************************************** */
 Request parse_request_safe(const char *raw) {
     Request req = {0};
     char buffer[1024];
@@ -54,8 +44,7 @@ Request parse_request_safer(const char *raw) {
     strncpy(buffer, raw, sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0';
 
-    // Use sscanf to parse the buffer safely but check the return code
-    // and bail out if it doesn't match what we expect
+    // Use sscanf to parse the buffer safely
     if (sscanf(buffer, "%7s %255s %15s", req.method, req.path, req.version) != 3) {
         strcpy(req.method, "INVALID");
         return req;

@@ -5,15 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-/*
- * You need this function to decide what kind of content type to return
- * Without it, the web browser won't know what to do with the contents and
- * it will display it as plain text rather than HTML
- * */
 const char *get_content_type(const char *path) {
-    //  If there's a period in the path we'll assume a file extension:
     const char *ext = strrchr(path, '.');
-    //  If we found an extension, check it:
     if (ext) {
         if (strcmp(ext, ".html") == 0) return "text/html";
         if (strcmp(ext, ".css") == 0) return "text/css";
@@ -22,50 +15,56 @@ const char *get_content_type(const char *path) {
         if (strcmp(ext, ".jpg") == 0 || strcmp(ext, ".jpeg") == 0) return "image/jpeg";
         if (strcmp(ext, ".txt") == 0) return "text/plain";
     }
-    // No extension or unrecognized extension, return binary data:
     return "application/octet-stream";
 }
 
-/*
- * This function handles the request and returns a response
- * */
 Response handle_request(const Request *req) {
     Response res = {0};
 
-    // For right now, we're only going to handle GET requests
     if (strcmp(req->method, "GET") != 0) {
         res.body = strdup("HTTP/1.1 405 Method Not Allowed\r\n\r\n");
         return res;
     }
 
-    // TODO - build the file path and
-    //  You'll want to use snprintf to build the file path
-    //   snprintf is like printf / sprintf but takes an extra parameter to specify how many bytes
-    //   https://en.cppreference.com/w/c/io/fprintf
+    char filepath[512];
+    if (strcmp(req->path, "/") == 0) {
+        snprintf(filepath, sizeof(filepath), "public/index.html");
+    } else {
+        snprintf(filepath, sizeof(filepath), "public%s", req->path);
+    }
+    char *file_contents = read_file(filepath);
+    if (file_contents == NULL) {
+        res.body = strdup("HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\n\r\nFile Not Found");
+        return res;
+    }
 
+    const char *content_type = get_content_type(filepath);
+    size_t file_len = strlen(file_contents);
 
-    //  TODO - now read the actual file and get the contents into the Response struct somehow
-    //    Be sure to handle any errors such as the file doesn't exist
+    // Allocate buffer for full response (headers + body)
+    res.body = malloc(1024 + file_len);  // Plenty of space for headers
+    if (res.body == NULL) {
+        free(file_contents);
+        res.body = strdup("HTTP/1.1 500 Internal Server Error\r\n\r\n");
+        return res;
+    }
 
+    // Write headers into res.body
+    int offset = snprintf(res.body, 1024,
+                          "HTTP/1.1 200 OK\r\n"
+                          "Content-Type: %s\r\n"
+                          "Content-Length: %zu\r\n"
+                          "\r\n",
+                          content_type, file_len
+    );
 
-    //  TODO - Now get the content type into a string
+    // Append file contents
+    strcpy(res.body + offset, file_contents);
 
-
-    //  TODO - at this point, you have the path, the file contents, and the content type so put all of that into
-    //    the response body.  You'll need to allocate memory for it.
-    //    there are a lot of ways to do this, feel free to be creative and do it however you want.
-    //    Just make sure that when you return the Response struct, the body is filled out with _everything_ that is
-    //    needed to be sent back to the client.
-
+    free(file_contents);
     return res;
 }
 
-
-
-/*
- * This function frees the response body.  Since we're allocating memory for the body, whatever function
- * uses it needs a way to free it when it's done with it.
- * */
 void free_response(Response *res) {
-    // TODO - implement this function to free the response body
+    if (res->body) free(res->body);
 }
