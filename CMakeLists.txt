@@ -21,4 +21,6 @@ add_executable(webserver main.c
         logger.h
         file_handler.c
         file_handler.h
+        server.c
+        server.h
 )
