@@ -1,3 +1,7 @@
+/*
+ * This file is a simple HTTP server implementation with default blocking sockets
+ *
+ * */
 #include "server.h"
 #include "request.h"
 #include "response.h"
@@ -41,20 +45,78 @@ typedef int socket_t;
 
 #endif
 
-int start_server(int port) {
+#define BACKLOG 10
 
-    // TODO - start the server
-    //   remember the server flow:
-    //   Use the provided macros to init/cleanup/close sockets
-    //   1. create a socket
-    //   2. bind the socket to an address
-    //   3. listen for incoming connections
-    //   4. accept incoming connections
-    //   5. read the request
-    //   6. parse the request
-    //   7. handle the request (create response)
-    //   8. send the response
-    //   9. close the connection
+int start_server(int port) {
+    INIT_SOCKETS();
+
+    socket_t server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd == -1) {
+        perror("socket");
+        return 1;
+    }
+
+    // Set socket option to allow address reuse to avoid
+    //  "Address already in use" error when restarting
+    int opt = 1;
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1) {
+        perror("setsockopt");
+        CLOSE_SOCKET(server_fd);
+        return 1;
+    }
+
+    struct sockaddr_in server_addr = {
+            .sin_family = AF_INET,
+            .sin_port = htons(port),
+            .sin_addr.s_addr = INADDR_ANY
+    };
+
+    if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
+        perror("bind");
+        CLOSE_SOCKET(server_fd);
+        return 1;
+    }
+
+    if (listen(server_fd, BACKLOG) == -1) {
+        perror("listen");
+        CLOSE_SOCKET(server_fd);
+        return 1;
+    }
+
+    log_info("Server started on port %d", port);
+
+    while (1) {
+        struct sockaddr_in client_addr;
+        socklen_t client_len = sizeof(client_addr);
+        socket_t client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len);
+        if (client_fd == -1) {
+            perror("accept");
+            continue;
+        }
+
+        // Get client IP address
+        char client_ip[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip));
+        log_info("Connection accepted from %s", client_ip);
+
+        // Read request from client
+        char buffer[1024] = {0};
+        size_t bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
+        if (bytes_read == -1) {
+            perror("Error reading request");
+            CLOSE_SOCKET(client_fd);
+            continue;
+        }
+
+        // Parse request and handle it
+        Request req = parse_request(buffer);
+        Response res = handle_request(&req);
+
+        // Send response to client
+        write(client_fd, res.body, strlen(res.body));
+        CLOSE_SOCKET(client_fd);
+        free_response(&res);
+    }
 
     CLOSE_SOCKET(server_fd);
     CLEANUP_SOCKETS();

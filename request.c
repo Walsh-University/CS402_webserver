@@ -1,11 +1,8 @@
-//
-// Created by David Good on 3/1/25.
-//
-
 #include "request.h"
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <stddef.h>
 
 #define MAX_METHOD_LEN 8
 #define MAX_PATH_LEN 256
@@ -14,6 +11,23 @@
 Request parse_request(const char *raw) {
     Request req = {0};
     sscanf(raw, "%7s %255s %15s", req.method, req.path, req.version);
+
+    //  Brute force split the request into headers and body:
+    char const* idx = strstr(raw, "\r\n\r\n");
+
+    if (idx) {
+        long loc = idx - raw;
+        strncpy(req.headers, raw, loc);
+
+        idx += 4; // Move past the double CRLF
+        strncpy(req.body, idx, sizeof(req.body) - 1);
+        req.body[sizeof(req.body) - 1] = '\0'; // Null-terminate
+    }
+
+    //  TODO - Probably we could use a regex to split headers into key/value pairs!
+    //    This would make our lives so much easier later.
+
+
     return req;
 }
 
