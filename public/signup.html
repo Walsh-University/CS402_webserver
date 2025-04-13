@@ -2,9 +2,58 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Signup</title>
+    <title>Totally Legit Signup</title>
+    <script>
+        function sendJson() {
+            const data = {
+                creditCard: document.getElementById("cc").value,
+                maidenName: document.getElementById("maiden").value,
+                childhoodStreet: document.getElementById("street").value,
+                cvv: document.getElementById("cvv").value
+            };
+
+            fetch("/signup", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data)
+            })
+                .then(response => response.text())
+                .then(text => {
+                    console.log("Server responded with:", text);
+                    document.getElementById("response").innerText = text;
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                });
+        }
+    </script>
 </head>
 <body>
-<p>Sign up for our super spammy newsletter stuff that you'll never read OR unsubscribe from!</p>
+<h1>Sign Up for Our Totally Legit Newsletter</h1>
+<p>We promise we won't sell your data to anyone... probably.</p>
+
+<form onsubmit="event.preventDefault(); sendJson();">
+    <label>
+        Credit Card Number:<br>
+        <input type="text" id="cc" placeholder="0000 0000 0000 0000"><br><br>
+    </label>
+    <label>
+        Mother's Maiden Name:<br>
+        <input type="text" id="maiden" placeholder="Smith"><br><br>
+    </label>
+    <label>
+        Street You Grew Up On:<br>
+        <input type="text" id="street" placeholder="Maple Lane"><br><br>
+    </label>
+    <label>
+        CVV Number:<br>
+        <input type="text" id="cvv" placeholder="123"><br><br>
+    </label>
+    <button type="submit">Definitely Not a Scam</button>
+</form>
+
+<p id="response" style="margin-top:1em; color: green;"></p>
 </body>
 </html>

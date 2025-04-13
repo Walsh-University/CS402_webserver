@@ -45,3 +45,33 @@ Priority: u=0, i
 username=asdf&password=asdf
 
 size of above request:  655 bytes.
+
+
+##############################################
+
+Sample POST request with JSON body to localhost:8080:
+
+POST /signup HTTP/1.1
+Host: localhost:8080
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:137.0) Gecko/20100101 Firefox/137.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br, zstd
+Referer: http://localhost:8080/signup.html
+Content-Type: application/json
+Content-Length: 78
+Origin: http://localhost:8080
+DNT: 1
+Sec-GPC: 1
+Connection: keep-alive
+Sec-Fetch-Dest: empty
+Sec-Fetch-Mode: cors
+Sec-Fetch-Site: same-origin
+Priority: u=0
+
+{
+  "creditCard":"1234567890",
+  "maidenName":"Smith",
+  "childhoodStreet":"",
+  "cvv":""
+}
