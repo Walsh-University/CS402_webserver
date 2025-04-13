@@ -29,7 +29,7 @@ void handle_json_post(const Request *req, Response *res) {
 
 // Function to handle POST FORM or JSON requests
 void handle_post_request(const Request *req, Response *res) {
-    const char *content_type = NULL;
+    const char *content_type = nullptr;
 
     // Search for the "Content-Type" header
     for (int i = 0; i < req->header_count; i++) {
