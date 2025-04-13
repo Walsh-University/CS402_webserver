@@ -8,28 +8,62 @@
 #define MAX_PATH_LEN 256
 #define MAX_VERSION_LEN 16
 
+
+
+
 Request parse_request(const char *raw) {
     Request req = {0};
     sscanf(raw, "%7s %255s %15s", req.method, req.path, req.version);
 
-    //  Brute force split the request into headers and body:
-    char const* idx = strstr(raw, "\r\n\r\n");
+    const char *header_start = strstr(raw, "\r\n");
+    const char *body_start = strstr(raw, "\r\n\r\n");
 
-    if (idx) {
-        long loc = idx - raw;
-        strncpy(req.headers, raw, loc);
-
-        idx += 4; // Move past the double CRLF
-        strncpy(req.body, idx, sizeof(req.body) - 1);
-        req.body[sizeof(req.body) - 1] = '\0'; // Null-terminate
+    if (!header_start || !body_start) {
+        return req; // Malformed request
     }
 
-    //  TODO - Probably we could use a regex to split headers into key/value pairs!
-    //    This would make our lives so much easier later.
+    header_start += 2; // Move past request line CRLF
 
+    // Copy headers into a temporary buffer
+    size_t headers_len = body_start - header_start;
+    char headers_buf[1024];
+    strncpy(headers_buf, header_start, headers_len);
+    headers_buf[headers_len] = '\0';
+
+    // Split headers by line using strtok_r
+    char *saveptr_line;
+    char const *line = strtok_r(headers_buf, "\r\n", &saveptr_line);
+
+    while (line && req.header_count < MAX_HEADERS) {
+        char const *colon = strchr(line, ':');
+        if (colon) {
+            size_t key_len = colon - line;
+            size_t value_len = strlen(colon + 1);
+
+            // Trim key
+            strncpy(req.header_list[req.header_count].key, line, key_len);
+            req.header_list[req.header_count].key[key_len] = '\0';
+
+            // Trim value
+            const char *value_start = colon + 1;
+            while (*value_start == ' ') value_start++;  // Skip leading space
+
+            strncpy(req.header_list[req.header_count].value, value_start, MAX_HEADER_VALUE - 1);
+            req.header_list[req.header_count].value[MAX_HEADER_VALUE - 1] = '\0';
+
+            req.header_count++;
+        }
+        line = strtok_r(nullptr, "\r\n", &saveptr_line);
+    }
+
+    // Copy body
+    const char *body = body_start + 4;
+    strncpy(req.body, body, sizeof(req.body) - 1);
+    req.body[sizeof(req.body) - 1] = '\0';
 
     return req;
 }
+
 
 Request parse_request_safe(const char *raw) {
     Request req = {0};

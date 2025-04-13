@@ -27,44 +27,41 @@ void handle_json_post(const Request *req, Response *res) {
 
 }
 
+// Function to handle POST FORM or JSON requests
 void handle_post_request(const Request *req, Response *res) {
+    const char *content_type = NULL;
 
-    // First we need to know what type of data we're handling:
-    // Content-Type: application/x-www-form-urlencoded/r/nblahblahblahablah
-
-    char const* idx = strstr(req->headers, "Content-Type: ");
-    char const* header = strstr(idx, "\r\n");
-    long loc = header - idx;
-
-    char content_type[100];
-    strncpy(content_type, idx, loc);
-
-    idx = strstr(content_type, ": ");
-    idx += 2; // Move past ": "
-
-
-    if (strstr(idx, "form") != nullptr ){
-        handle_form_post(req, res);
+    // Search for the "Content-Type" header
+    for (int i = 0; i < req->header_count; i++) {
+        if (strcasecmp(req->header_list[i].key, "Content-Type") == 0) {
+            content_type = req->header_list[i].value;
+            break;
+        }
     }
-    else if (strstr(idx, "json") != nullptr) {
-        handle_json_post(req, res);
-    } else {
-        // Handle other content types or return an error
-        res->body = strdup("HTTP/1.1 415 Unsupported Media Type\r\n\r\n");
+
+    if (!content_type) {
+        res->body = strdup("HTTP/1.1 400 Bad Request\r\n\r\nMissing Content-Type header");
         return;
     }
 
-
-    res = malloc(sizeof(Response));
-    res->body = nullptr;
+    if (strstr(content_type, "form") != NULL) {
+        handle_form_post(req, res);
+    }
+    else if (strstr(content_type, "json") != NULL) {
+        handle_json_post(req, res);
+    }
+    else {
+        res->body = strdup("HTTP/1.1 415 Unsupported Media Type\r\n\r\n");
+        return;
+    }
 }
+
 
 
 Response handle_request(const Request *req) {
     Response res = {0};
 
     if (strcmp(req->method, "GET") == 0) {
-
         char filepath[512];
         if (strcmp(req->path, "/") == 0) {
             snprintf(filepath, sizeof(filepath), "public/index.html");
@@ -104,7 +101,7 @@ Response handle_request(const Request *req) {
     } else if (strcmp(req->method, "POST") == 0) {
         handle_post_request(req, &res);
     } else {
-        res.body = strdup("HTTP/1.1 405 Method Not Allowed\r\n\r\n");
+        res.body = strdup("HTTP/1.1 405 Method Not Allowed\r\nContent-Type: text/plain\r\n\r\nMethod Not Allowed");
         return res;
     }
 
