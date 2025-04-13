@@ -18,8 +18,95 @@ const char *get_content_type(const char *path) {
     return "application/octet-stream";
 }
 
+// Helper function for hex conversion
+int hex_to_int(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+// URL decode function to handle encoded characters in form submissions
+char *url_decode(const char *src) {
+    size_t src_len = strlen(src);
+    char *decoded = malloc(src_len + 1);
+    if (!decoded) return nullptr;
+
+    size_t j = 0;
+    for (size_t i = 0; i < src_len; i++) {
+        if (src[i] == '%' && i + 2 < src_len) {
+            int high = hex_to_int(src[i+1]);
+            int low = hex_to_int(src[i+2]);
+            if (high != -1 && low != -1) {
+                decoded[j++] = (high << 4) | low;
+                i += 2;
+                continue;
+            }
+        } else if (src[i] == '+') {
+            decoded[j++] = ' ';
+            continue;
+        }
+        decoded[j++] = src[i];
+    }
+    decoded[j] = '\0';
+    return decoded;
+}
+
+char *get_form_value(const char *body, size_t body_len, const char *key) {
+    if (!body || !key) return nullptr;
+
+    size_t key_len = strlen(key);
+    const char *pos = body;
+    const char *end = body + body_len;
+
+    while (pos < end) {
+        // Find the next occurrence of the key
+        if (strncmp(pos, key, key_len) == 0 && pos[key_len] == '=') {
+            // Found the key, extract the value
+            const char *value_start = pos + key_len + 1;
+            const char *value_end = strchr(value_start, '&');
+            if (!value_end) value_end = end; // Last parameter
+
+            size_t value_len = value_end - value_start;
+            char *value = malloc(value_len + 1);
+            if (!value) return nullptr;
+
+            memcpy(value, value_start, value_len);
+            value[value_len] = '\0';
+
+            // URL decode the value
+            char *decoded = url_decode(value);
+            free(value);
+            return decoded;
+        }
+
+        // Move to the next parameter
+        pos = strchr(pos, '&');
+        if (!pos) break;
+        pos++; // Skip the '&'
+    }
+
+    return nullptr; // Key not found
+}
+
 void handle_form_post(const Request *req, Response *res) {
-    // TODO - Implement form handling logic
+    // Pretend we're not processing a login form ;)
+    char *username = get_form_value(req->body, strlen(req->body), "username");
+    char *password = get_form_value(req->body, strlen(req->body), "password");
+
+    if (username && password) {
+        // TODO - Normally you would validate the username and password here
+        //    Preferably use an identity provider like Auth0 or Okta
+
+        //  We're just simulating some POST form data processing
+        res->body = strdup("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nLogin Successful");
+    } else {
+        res->body = strdup("HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nMissing username or password");
+    }
+
+    // Free allocated memory
+    if (username) free(username);
+    if (password) free(password);
 }
 
 void handle_json_post(const Request *req, Response *res) {
@@ -55,8 +142,6 @@ void handle_post_request(const Request *req, Response *res) {
         return;
     }
 }
-
-
 
 Response handle_request(const Request *req) {
     Response res = {0};
