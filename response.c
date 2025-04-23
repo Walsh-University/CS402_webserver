@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "json_handler.h"
 
 const char *get_content_type(const char *path) {
     const char *ext = strrchr(path, '.');
@@ -109,11 +110,6 @@ void handle_form_post(const Request *req, Response *res) {
     if (password) free(password);
 }
 
-void handle_json_post(const Request *req, Response *res) {
-    // TODO - Implement JSON handling logic
-
-}
-
 // Function to handle POST FORM or JSON requests
 void handle_post_request(const Request *req, Response *res) {
     const char *content_type = nullptr;
@@ -135,7 +131,7 @@ void handle_post_request(const Request *req, Response *res) {
         handle_form_post(req, res);
     }
     else if (strstr(content_type, "json") != NULL) {
-        handle_json_post(req, res);
+        handle_json_request(req);
     }
     else {
         res->body = strdup("HTTP/1.1 415 Unsupported Media Type\r\n\r\n");

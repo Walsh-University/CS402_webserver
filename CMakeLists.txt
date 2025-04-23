@@ -33,6 +33,8 @@ add_executable(webserver main.c
         server_async.c
         server_async.h
         server_threaded.h
+        json_handler.c
+        json_handler.h
 )
 
 # Force the build to copy our HTML files every time
